@@ -1,24 +1,186 @@
-#include <iostream>
-#include <stdio.h>
-#include <string.h>
-#include <netdb.h>
+#include <stdio.h>  // console input/output, perror
+#include <stdlib.h> // exit
+#include <string.h> // string manipulation
+#include <netdb.h>  // getnameinfo
 
-#include <sys/socket.h>
-#include<netinet/in.h>
-#include<unistd.h>
+#include <sys/socket.h> // socket APIs
+#include <netinet/in.h> // sockaddr_in
+#include <unistd.h>     // open, close
 
-#include <signal.h>
-#include <time.h>
+#include <signal.h> // signal handling
+#include <time.h>   // time
 
-# define SIZE 100
-// TUTORIAL: https://medium.com/@nipunweerasiri/a-simple-web-server-written-in-c-cf7445002e6
+#define SIZE 1024  // buffer size
+#define PORT 2728  // port number
+#define BACKLOG 10 // number of pending connections queue will hold
 
+void getFileURL(char *route, char *fileURL);
 
+void getMimeType(char *file, char *mime);
+
+void handleSignal(int signal);
+
+void getTimeString(char *buf);
+
+int serverSocket;
+int clientSocket;
+
+char *request;
+
+int main()
+{
+
+    // register signal handler
+    signal(SIGINT, handleSignal);
+
+    // server internet socket address
+    struct sockaddr_in serverAddress;
+    serverAddress.sin_family = AF_INET;                     // IPv4
+    serverAddress.sin_port = htons(PORT);                   // port number in network byte order (host-to-network short)
+    serverAddress.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // localhost (host to network long)
+
+    // socket of type IPv4 using TCP protocol
+    serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    // reuse address and port
+    int one = 1;
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int));
+
+    // bind socket to address
+    if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
+    {
+        printf("Error: The server is not bound to the address.\n");
+        return 1;
+    }
+
+    // listen for connections
+    if (listen(serverSocket, BACKLOG) < 0)
+    {
+        printf("Error: The server is not listening.\n");
+        return 1;
+    }
+
+    // get server address information
+    char hostBuffer[NI_MAXHOST], serviceBuffer[NI_MAXSERV];
+    int error = getnameinfo((struct sockaddr *)&serverAddress, sizeof(serverAddress), hostBuffer,
+                            sizeof(hostBuffer), serviceBuffer, sizeof(serviceBuffer), 0);
+
+    if (error != 0)
+    {
+        printf("Error: %s\n", gai_strerror(error));
+        return 1;
+    }
+
+    printf("\nServer is listening on http://%s:%s/\n\n", hostBuffer, serviceBuffer);
+
+    while (1)
+    {
+        // buffer to store data (request)
+        request = (char *)malloc(SIZE * sizeof(char));
+        char method[10], route[100];
+
+        // accept connection and read data
+        clientSocket = accept(serverSocket, NULL, NULL);
+        read(clientSocket, request, SIZE);
+
+        // parse HTTP request
+        sscanf(request, "%s %s", method, route);
+        printf("%s %s", method, route);
+
+        free(request);
+
+        // only support GET method
+        if (strcmp(method, "GET") != 0)
+        {
+            const char response[] = "HTTP/1.1 400 Bad Request\r\n\n";
+            send(clientSocket, response, sizeof(response), 0);
+        }
+        else
+        {
+            char fileURL[100];
+
+            // generate file URL
+            getFileURL(route, fileURL);
+
+            // read file
+            FILE *file = fopen(fileURL, "r");
+            if (!file)
+            {
+                const char response[] = "HTTP/1.1 404 Not Found\r\n\n";
+                send(clientSocket, response, sizeof(response), 0);
+            }
+            else
+            {
+                // generate HTTP response header
+                char resHeader[SIZE];
+
+                // get current time
+                char timeBuf[100];
+                getTimeString(timeBuf);
+
+                // generate mime type from file URL
+                char mimeType[32];
+                getMimeType(fileURL, mimeType);
+
+                sprintf(resHeader, "HTTP/1.1 200 OK\r\nDate: %s\r\nContent-Type: %s\r\n\n", timeBuf, mimeType);
+                int headerSize = strlen(resHeader);
+
+                printf(" %s", mimeType);
+
+                // Calculate file size
+                fseek(file, 0, SEEK_END);
+                long fsize = ftell(file);
+                fseek(file, 0, SEEK_SET);
+
+                // Allocates memory for response buffer and copies response header and file contents to it
+                char *resBuffer = (char *)malloc(fsize + headerSize);
+                strcpy(resBuffer, resHeader);
+
+                // Starting position of file contents in response buffer
+                char *fileBuffer = resBuffer + headerSize;
+                fread(fileBuffer, fsize, 1, file);
+
+                send(clientSocket, resBuffer, fsize + headerSize, 0);
+                free(resBuffer);
+                fclose(file);
+            }
+        }
+        close(clientSocket);
+        printf("\n");
+    }
+}
+
+void getFileURL(char *route, char *fileURL)
+{
+    // if route has parameters, remove them
+    char *question = strrchr(route, '?');
+    if (question)
+        *question = '\0';
+
+    // if route is empty, set it to index.html
+    if (route[strlen(route) - 1] == '/')
+    {
+        strcat(route, "index.html");
+    }
+
+    // get filename from route
+    strcpy(fileURL, "htdocs");
+    strcat(fileURL, route);
+
+    // if filename does not have an extension, set it to .html
+    const char *dot = strrchr(fileURL, '.');
+    if (!dot || dot == fileURL)
+    {
+        strcat(fileURL, ".html");
+    }
+}
 
 void getMimeType(char *file, char *mime)
 {
+    // position in string with period character
     const char *dot = strrchr(file, '.');
 
+    // if period not found, set mime type to text/html
     if (dot == NULL)
         strcpy(mime, "text/html");
 
@@ -44,124 +206,25 @@ void getMimeType(char *file, char *mime)
         strcpy(mime, "text/html");
 }
 
-
-void getFileURL(char * route, char * fileURL) {
-    char *question = strrchr(route, '?');
-    if (question)
-        *question = '\0';
-
-    if (route[strlen(route) - 1] == '/') {
-        strcat(route, "index.html");
-    }
-    strcpy(fileURL, "htdocs");
-    strcat(fileURL, route);
-
-
-    const char *dot = strrchr(fileURL, '.');
-    if (!dot || dot == fileURL)
+void handleSignal(int signal)
+{
+    if (signal == SIGINT)
     {
-        strcat(fileURL, ".html");
+        printf("\nShutting down server...\n");
+
+        close(clientSocket);
+        close(serverSocket);
+
+        if (request != NULL)
+            free(request);
+
+        exit(0);
     }
 }
 
-void getTimeString(char * timeBuf) {
-    time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
-    sprintf(timeBuf, "%d-%02d-%02d %02d:%02d:%02d\n", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-}
-
-int main() {
-    struct sockaddr_in serverAddress;
-    serverAddress.sin_family = AF_INET;
-    int portno = 5001; // będziemy serwować z tego adresu?
-    serverAddress.sin_port = htons(portno);
-    serverAddress.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-    int value = 1;
-    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(int));
-    // REUSEADDR_EXPLANATION: https://stackoverflow.com/questions/775638/using-so-reuseaddr-what-happens-to-previously-open-socket
-
-    // WHAT DOES BINDING DO?: https://stackoverflow.com/questions/12763268/why-is-bind-used-in-tcp-why-is-it-used-only-on-server-side-and-not-in-client
-    if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) {
-        printf("ERROR: server is not bound to an address.\n");
-        return errno;
-    }
-    if (listen(serverSocket, 3) < 0) {
-        return 1;
-    }
-
-    char hostBuffer[NI_MAXHOST], serviceBuffer[NI_MAXSERV];
-    int error = getnameinfo((struct sockaddr *)&serverAddress, sizeof(serverAddress), hostBuffer,
-                            sizeof(hostBuffer), serviceBuffer, sizeof(serviceBuffer), 0);
-    if (error != 0) {
-        printf("Error: %s\n", gai_strerror(error));
-        return 1;
-    }
-
-    printf("\nServer is listening on http://%s:%s/\n\n", hostBuffer, serviceBuffer);
-
-    char *request;
-
-    while (true) {
-        //printf("Inside loop.\n");
-        request = (char *)malloc(SIZE * sizeof(char));
-        //printf("Request read.\n");
-        char method[10], route[100];
-        int clientSocket = accept(serverSocket, NULL, NULL);
-        read(clientSocket, request, SIZE);
-        //printf("Client socket accepted.\n");
-        sscanf(request, "%s %s", method, route);
-        printf("%s %s\n", method, route);
-        char fileURL[100];
-        getFileURL(route, fileURL);
-        FILE *file = fopen(fileURL, "r");
-        printf("%s\n", fileURL);
-        if (!file)
-        {
-            printf("ERROR: File not found.\n");
-            const char response[] = "HTTP/1.1 404 Not Found\r\n\n";
-            send(clientSocket, response, sizeof(response), 0);
-        } else {
-            printf("File opened.\n");
-            char resHeader[SIZE];
-            char mimeType[32];
-            getMimeType(fileURL, mimeType);
-
-            //char timeBuf[100];
-            //getTimeString(timeBuf);
-
-            sprintf(resHeader, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\n\n", mimeType);
-            strcpy(resHeader, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\n");
-            printf("Res header:\n");
-            printf("Res header: %s\n", resHeader);
-            strcpy(resHeader, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\n");
-
-            printf("Res header: %s\n", resHeader);
-            // RES HEADER CAN'T BE PRINTED FOR SOME REASON, even tho it is saved ):
-            // that's prolly the reason why it can't be copied into the response
-            // use C++ strings instead idk
-            int headerSize = strlen(resHeader);
-
-            //printf(" %s", mimeType);
-
-            fseek(file, 0, SEEK_END);
-            long fsize = ftell(file);
-            fseek(file, 0, SEEK_SET);
-
-            char *resBuffer = (char *)malloc(fsize + headerSize);
-            strcpy(resBuffer, resHeader);
-            printf("RES BUFFER:");
-            printf("RES BUFFER: %s\n", resBuffer);
-            char *fileBuffer = resBuffer + headerSize;
-            fread(fileBuffer, fsize, 1, file);
-            //printf("%s\n", resBuffer);
-            send(clientSocket, resBuffer, fsize + headerSize, 0);
-            free(resBuffer);
-            fclose(file);
-        }
-        printf("End of request handling.\n");
-    }
-    free(request);
-    return 0;
+void getTimeString(char *buf)
+{
+    time_t now = time(0);
+    struct tm tm = *gmtime(&now);
+    strftime(buf, sizeof buf, "%a, %d %b %Y %H:%M:%S %Z", &tm);
 }

@@ -3,4 +3,5 @@ project(HTTP)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(HTTP main.cpp)
+add_executable(HTTP main.cpp
+        main_cp.cpp)
