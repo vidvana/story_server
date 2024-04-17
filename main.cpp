@@ -2,7 +2,8 @@
 #include <stdlib.h> // exit
 #include <string.h> // string manipulation
 #include <netdb.h>  // getnameinfo
-
+#include "http_header.h"
+#include "routing.h"
 #include <sys/socket.h> // socket APIs
 #include <netinet/in.h> // sockaddr_in
 #include <unistd.h>     // open, close
@@ -10,17 +11,17 @@
 #include <signal.h> // signal handling
 #include <time.h>   // time
 
+#include <fstream>
+// Path :/home/julia/CLionProjects/HTTP/json-3.11.3/include
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
+// EasyQtSql
+
+
 #define SIZE 1024  // buffer size
 #define PORT 2728  // port number
 #define BACKLOG 10 // number of pending connections queue will hold
-
-void getFileURL(char *route, char *fileURL);
-
-void getMimeType(char *file, char *mime);
-
-void handleSignal(int signal);
-
-void getTimeString(char *buf);
 
 int serverSocket;
 int clientSocket;
@@ -29,6 +30,14 @@ char *request;
 
 int main()
 {
+
+    // ...
+    //json ex2 = R"(
+    //  {
+    //    "Wikipedia": "https://www.wikipedia.org/",
+    //    "E-nauczanie": "https://enauczanie.pg.edu.pl/moodle/",
+    //  }
+    //)"_json;
 
     // register signal handler
     signal(SIGINT, handleSignal);
@@ -150,62 +159,6 @@ int main()
     }
 }
 
-void getFileURL(char *route, char *fileURL)
-{
-    // if route has parameters, remove them
-    char *question = strrchr(route, '?');
-    if (question)
-        *question = '\0';
-
-    // if route is empty, set it to index.html
-    if (route[strlen(route) - 1] == '/')
-    {
-        strcat(route, "index.html");
-    }
-
-    // get filename from route
-    strcpy(fileURL, "htdocs");
-    strcat(fileURL, route);
-
-    // if filename does not have an extension, set it to .html
-    const char *dot = strrchr(fileURL, '.');
-    if (!dot || dot == fileURL)
-    {
-        strcat(fileURL, ".html");
-    }
-}
-
-void getMimeType(char *file, char *mime)
-{
-    // position in string with period character
-    const char *dot = strrchr(file, '.');
-
-    // if period not found, set mime type to text/html
-    if (dot == NULL)
-        strcpy(mime, "text/html");
-
-    else if (strcmp(dot, ".html") == 0)
-        strcpy(mime, "text/html");
-
-    else if (strcmp(dot, ".css") == 0)
-        strcpy(mime, "text/css");
-
-    else if (strcmp(dot, ".js") == 0)
-        strcpy(mime, "application/js");
-
-    else if (strcmp(dot, ".jpg") == 0)
-        strcpy(mime, "image/jpeg");
-
-    else if (strcmp(dot, ".png") == 0)
-        strcpy(mime, "image/png");
-
-    else if (strcmp(dot, ".gif") == 0)
-        strcpy(mime, "image/gif");
-
-    else
-        strcpy(mime, "text/html");
-}
-
 void handleSignal(int signal)
 {
     if (signal == SIGINT)
@@ -222,9 +175,11 @@ void handleSignal(int signal)
     }
 }
 
-void getTimeString(char *buf)
-{
-    time_t now = time(0);
-    struct tm tm = *gmtime(&now);
-    strftime(buf, sizeof buf, "%a, %d %b %Y %H:%M:%S %Z", &tm);
-}
+// TODO:
+// 0. C++: stworz jsona reprezentującego rozdziały
+// 1. JAVASCRIPT: stwórz drukowanie za pomocą query z rozdziałami: nazwa, link idk?
+// 2. NA RAZIE BEZ LOGOWANIA - KAŻDY, KTO MA LINK MA DOSTĘP
+
+
+
+// Może potem: generuj okna z tekstem jako paragrafy (textboxy na srodku ekranu jeden na drugim);

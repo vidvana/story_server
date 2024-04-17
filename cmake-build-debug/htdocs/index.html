@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>HTML 5 Boilerplate</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+  <header id="main_header">
+    <div>
+      <h1>Story Title</h1>
+    </div>
+    <hr class="title_separator">
+    <div>
+      <h2>Chapter 1: How jellyfish jumped up the mountain</h2>
+    </div>
+  </header>
+
+  <div>
+
+  </div>
+  <div>
+
+  </div>
+
+
+  <div>
+
+    <div class="paragraph">
+      <section class="icon_container">
+        <! –– the icons ––>
+        <div class="row">
+          <div class="paragraph_button">
+            <p>✏️</p>
+          </div>
+          <div class="paragraph_button">
+            <p>💡</p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="paragraph_button">
+            <p>⬆️</p>
+          </div>
+          <div class="paragraph_button">
+            <p>⬇️</p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="paragraph_button">
+            <p>❌</p>
+          </div>
+          <div class="empty_paragraph_button">
+            <p></p>
+          </div>
+        </div>
+      </section>
+      <section class="content_container">
+        <div>Sed ut perspiciatis, unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam eaque ipsa, quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt, explicabo. Nemo enim ipsam voluptatem, quia voluptas sit, aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos, qui ratione voluptatem sequi nesciunt, neque porro quisquam est, qui dolorem ipsum, quia dolor sit amet consectetur adipisci[ng] velit, sed quia non numquam [do] eius modi tempora inci[di]dunt, ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum[d] exercitationem.</div>
+      </section>
+    </div>
+
+    <div class="paragraph">
+      <section class="icon_container">
+        <! –– the icons ––>
+        <div class="row">
+          <div>
+            <p>✏️</p>
+          </div>
+          <div>
+            <p>💡</p>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <p>⬆️</p>
+          </div>
+          <div>
+            <p>⬇️</p>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <p>🗑️</p>
+          </div>
+          <div>
+            <p></p>
+          </div>
+        </div>
+      </section>
+      <section class="content_container">
+        <div>At vero eos et accusamus et iusto odio dignissimos ducimus, qui blanditiis praesentium voluptatum deleniti atque corrupti, quos dolores et quas molestias excepturi sint, obcaecati cupiditate non provident, similique sunt in culpa, qui officia deserunt mollitia animi, id est laborum et dolorum fuga.</div>
+      </section>
+    </div>
+
+  </div>
+  <script>
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", "https://jsonplaceholder.typicode.com/users");
+    xhr.send();
+    xhr.responseType = "json";
+    xhr.onload = () => {
+      if (xhr.readyState == 4 && xhr.status == 200) {
+        const data = xhr.response;
+        console.log(data);
+      } else {
+        console.log(`Error: ${xhr.status}`);
+      }
+    };
+  </script>
+  </body>
+</html>

@@ -4,4 +4,12 @@ project(HTTP)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(HTTP main.cpp
-        main_cp.cpp)
+        http_header.h
+        http_header.cpp
+        routing.h
+        routing.cpp
+)
+
+include_directories(
+        lib
+)
